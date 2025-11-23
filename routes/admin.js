@@ -17,7 +17,7 @@ router.get('/cleaners/pending', protect, authorize('admin'), async (req, res) =>
     const { city, service, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    let query = { approvalStatus: 'pending' };
+    let query = { verificationStatus: 'pending' };
     if (city) query.city = new RegExp(city, 'i');
     if (service) query.services = service;
 

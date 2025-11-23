@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
-const { Transaction } = require('../models/Booking');
+const Transaction = require('../models/transaction');
 const User = require('../models/User');
 const CleanerProfile = require('../models/CleanerProfile');
 const IntaSend = require('intasend-node');

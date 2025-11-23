@@ -19,7 +19,7 @@ router.post('/register', [
   body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
   body('phone').matches(/^0[17]\d{8}$/).withMessage('Please provide a valid Kenyan phone number'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['client', 'cleaner']).withMessage('Role must be either client or cleaner')
+  body('role').optional().isIn(['client', 'cleaner', 'team_leader']).withMessage('Role must be client, cleaner, or team_leader')
 ], async (req, res) => {
   try {
     // Check for validation errors
