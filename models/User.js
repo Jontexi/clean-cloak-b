@@ -31,8 +31,17 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['client', 'cleaner', 'admin'],
+    enum: ['client', 'cleaner', 'admin', 'team_leader'],
     default: 'client'
+  },
+  verificationStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'rejected'],
+    default: 'pending'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   },
   isVerified: {
     type: Boolean,
