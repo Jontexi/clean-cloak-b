@@ -2,6 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const compression = require('compression');
+const morgan = require('morgan');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -9,17 +14,44 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security middleware
+app.use(helmet());
+app.use(compression());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+// Logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
+
+// CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:5173',                           // Local development
-    'https://teal-daffodil-d3a9b2.netlify.app',       // Your Netlify frontend
-    'https://clean-cloak-backend.onrender.com'        // Your backend (for testing)
-  ],
-  credentials: true
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/clean-cloak', {
@@ -72,5 +104,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://teal-daffodil-d3a9b2.netlify.app/'}`);
 });
