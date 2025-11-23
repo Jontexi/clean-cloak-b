@@ -13,7 +13,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',                           // Local development
+    'https://teal-daffodil-d3a9b2.netlify.app',       // Your Netlify frontend
+    'https://clean-cloak-backend.onrender.com'        // Your backend (for testing)
+  ],
   credentials: true
 }));
 
@@ -34,6 +38,8 @@ app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/team-leader', require('./routes/team-leader'));  // Team Leader System
+app.use('/api/verification', require('./routes/verification'));  // Verification System
 // Health check route
 app.get('/api/health', (req, res) => {
   res.json({ 
