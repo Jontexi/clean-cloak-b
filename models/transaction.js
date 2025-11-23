@@ -26,48 +26,19 @@ const transactionSchema = new mongoose.Schema({
   },
   amount: {
     type: Number,
-    required: true,
-    min: 0
+    required: true
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded'],
+    enum: ['pending', 'completed', 'failed'],
     default: 'pending'
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['mpesa', 'intasend', 'cash', 'bank_transfer'],
-    default: 'intasend'
-  },
-  transactionId: {
-    type: String,
-    unique: true
-  },
-  description: {
-    type: String,
-    trim: true
-  },
-  metadata: {
-    type: mongoose.Schema.Types.Mixed
   },
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-// Generate unique transaction ID before saving
-transactionSchema.pre('save', function(next) {
-  if (!this.transactionId) {
-    this.transactionId = 'TXN' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
-  }
-  next();
-});
+// ✅ Fix: prevent OverwriteModelError by reusing existing model if already compiled
+module.exports = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
-module.exports = mongoose.model('Transaction', transactionSchema);
