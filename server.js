@@ -10,13 +10,7 @@ const path = require('path');
 const serverless = require('serverless-http');
 
 
-if (process.env.NODE_ENV === 'production') {
-  module.exports = serverless(app);
-} else {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
+
 }
 // Load environment variables
 dotenv.config();
