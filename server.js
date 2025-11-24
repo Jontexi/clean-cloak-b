@@ -85,7 +85,40 @@ async function connectToDatabase() {
     throw err;
   }
 }
+// Enhanced error handling for serverless
+process.on('unhandledRejection', (err, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', err);
+});
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// Enhanced error middleware
+app.use((err, req, res, next) => {
+  console.error('Server Error:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    userAgent: req.get('User-Agent')
+  });
+  
+  const statusCode = err.statusCode || err.status || 500;
+  
+  res.status(statusCode).json({
+    success: false,
+    message: process.env.NODE_ENV === 'production' 
+      ? 'Internal Server Error' 
+      : err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      error: err 
+    })
+  });
+});
 // Initialize connection
 connectToDatabase().catch(err => {
   console.error('Failed to initialize database connection:', err);
