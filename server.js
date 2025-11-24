@@ -57,13 +57,39 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/clean-cloak', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB Connected Successfully'))
-.catch((err) => console.error('❌ MongoDB Connection Error:', err));
+
+// MongoDB Connection with serverless optimization
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedDb) {
+    return cachedDb;
+  }
+  
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      bufferMaxEntries: 0
+    });
+    
+    cachedDb = conn;
+    console.log('✅ MongoDB Connected Successfully');
+    return conn;
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err);
+    throw err;
+  }
+}
+
+// Initialize connection
+connectToDatabase().catch(err => {
+  console.error('Failed to initialize database connection:', err);
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
