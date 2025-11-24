@@ -7,12 +7,7 @@ const CleanerProfile = require('../models/CleanerProfile');
 const User = require('../models/User');
 const IntaSend = require('intasend-node');   // <-- NEW
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs').promises;
-const path = require('path');
-
-const DATA_FILE = path.join(__dirname, '..', 'data', 'bookings.json');
-const RATINGS_FILE = path.join(__dirname, '..', 'data', 'ratings.json');
-const CLEANERS_FILE = path.join(__dirname, '..', 'data', 'cleaners.json');
+// File system operations removed - using MongoDB only
 
 const formatCurrency = new Intl.NumberFormat('en-KE', {
   style: 'currency',
@@ -240,13 +235,13 @@ router.get('/opportunities', protect, authorize('cleaner'), async (req, res) => 
         .join(' · ');
 
       const timing = booking.bookingType === 'scheduled' && booking.scheduledDate
-        ? `${booking.scheduledDate}${booking.scheduledTime ? ` · ${booking.scheduledTime}` : ''}`
+        ? `${booking.scheduledDate}${booking.scheduledTime ? ` · ${booking.scheduledTime}` : ''}` 
         : 'Immediate dispatch';
 
       const requirements = [
         booking.vehicleType ? `Vehicle: ${booking.vehicleType}` : null,
         booking.carServiceOption ? `Package: ${booking.carServiceOption}` : null,
-        `Status: ${booking.status}`
+        `Status: ${booking.status}` 
       ].filter(Boolean);
 
       return {
