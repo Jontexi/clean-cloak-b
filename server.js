@@ -76,8 +76,6 @@ async function connectToDatabase() {
   
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -109,13 +107,13 @@ connectToDatabase().catch(err => {
   console.error('Failed to initialize database connection:', err);
 });
 
-// Routes
+// Routes (CHAT ROUTE DISABLED TO FIX ERROR)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/cleaners', require('./routes/cleaners'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tracking', require('./routes/tracking'));
-app.use('/api/chat', require('./routes/chat'));
+// app.use('/api/chat', require('./routes/chat')); // DISABLED - missing ChatRoom model
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/team-leader', require('./routes/team-leader'));  // Team Leader System
@@ -164,7 +162,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Enhanced error middleware (REMOVED DUPLICATE)
+// Enhanced error middleware
 app.use((err, req, res, next) => {
   console.error('Server Error:', {
     message: err.message,
