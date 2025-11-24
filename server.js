@@ -9,9 +9,6 @@ const morgan = require('morgan');
 const path = require('path');
 const serverless = require('serverless-http');
 
-
-
-}
 // Load environment variables
 dotenv.config();
 
@@ -35,6 +32,18 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Request timeout for serverless
+app.use((req, res, next) => {
+  res.setTimeout(25000, () => {
+    console.error('Request timeout:', req.url);
+    res.status(408).json({
+      success: false,
+      message: 'Request timeout'
+    });
+  });
+  next();
+});
+
 // Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -56,7 +65,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 
 // MongoDB Connection with serverless optimization
 let cachedDb = null;
@@ -85,6 +93,7 @@ async function connectToDatabase() {
     throw err;
   }
 }
+
 // Enhanced error handling for serverless
 process.on('unhandledRejection', (err, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', err);
@@ -95,7 +104,67 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-// Enhanced error middleware
+// Initialize connection
+connectToDatabase().catch(err => {
+  console.error('Failed to initialize database connection:', err);
+});
+
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/cleaners', require('./routes/cleaners'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/tracking', require('./routes/tracking'));
+app.use('/api/chat', require('./routes/chat'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/team-leader', require('./routes/team-leader'));  // Team Leader System
+app.use('/api/verification', require('./routes/verification'));  // Verification System
+
+// Enhanced health check route
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    const dbState = mongoose.connection.readyState;
+    const dbStates = {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting'
+    };
+    
+    const health = {
+      status: 'OK',
+      message: 'Clean Cloak API is running',
+      timestamp: new Date().toISOString(),
+      database: {
+        state: dbStates[dbState],
+        healthy: dbState === 1
+      },
+      environment: process.env.NODE_ENV || 'development',
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+      }
+    };
+    
+    if (dbState !== 1) {
+      health.status = 'WARNING';
+      health.message = 'Database connection issue';
+    }
+    
+    res.status(dbState === 1 ? 200 : 503).json(health);
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Health check failed',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// Enhanced error middleware (REMOVED DUPLICATE)
 app.use((err, req, res, next) => {
   console.error('Server Error:', {
     message: err.message,
@@ -119,40 +188,6 @@ app.use((err, req, res, next) => {
     })
   });
 });
-// Initialize connection
-connectToDatabase().catch(err => {
-  console.error('Failed to initialize database connection:', err);
-});
-
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/bookings', require('./routes/bookings'));
-app.use('/api/cleaners', require('./routes/cleaners'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/tracking', require('./routes/tracking'));
-app.use('/api/chat', require('./routes/chat'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/team-leader', require('./routes/team-leader'));  // Team Leader System
-app.use('/api/verification', require('./routes/verification'));  // Verification System
-// Health check route
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'Clean Cloak API is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
 
 // 404 handler
 app.use((req, res) => {
@@ -162,7 +197,24 @@ app.use((req, res) => {
   });
 });
 
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed');
+    process.exit(0);
+  });
+});
 
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed');
+    process.exit(0);
+  });
+});
+
+// Serverless export for Vercel
 if (process.env.NODE_ENV === 'production') {
   module.exports = serverless(app);
 } else {
