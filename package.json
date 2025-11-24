@@ -13,9 +13,7 @@
     "services",
     "api",
     "kenya"
-  ],
-  "author": "",
-  "license": "MIT",
+ {
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
@@ -30,8 +28,10 @@
     "morgan": "^1.10.0",
     "mongoose": "^8.0.3",
     "multer": "^1.4.5-lts.1",
+    "serverless-http": "^3.0.2",  // ← ADD THIS LINE
     "uuid": "^10.0.0"
-  },
+  }
+}
   "devDependencies": {
     "nodemon": "^3.0.2"
   }
