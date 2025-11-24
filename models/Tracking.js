@@ -1,11 +1,27 @@
+
 const mongoose = require('mongoose');
+
+const locationPointSchema = new mongoose.Schema({
+  latitude: {
+    type: Number,
+    required: true
+  },
+  longitude: {
+    type: Number,
+    required: true
+  },
+  address: String,
+  timestamp: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
 
 const trackingSchema = new mongoose.Schema({
   booking: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking',
     required: true
-    // ❌ removed index: true to avoid duplicate with schema.index()
   },
   cleaner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,26 +33,23 @@ const trackingSchema = new mongoose.Schema({
     enum: ['assigned', 'in_progress', 'completed', 'cancelled'],
     default: 'assigned'
   },
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      default: [0, 0]
-    }
+  currentLocation: {
+    latitude: Number,
+    longitude: Number,
+    address: String
   },
+  locationHistory: [locationPointSchema],
+  estimatedArrival: String,
   updatedAt: {
     type: Date,
     default: Date.now
   }
+}, {
+  timestamps: true
 });
 
-// ✅ Keep schema-level indexes only (no duplicates)
+// Indexes
 trackingSchema.index({ booking: 1 });
 trackingSchema.index({ cleaner: 1, status: 1 });
 
 module.exports = mongoose.models.Tracking || mongoose.model('Tracking', trackingSchema);
-
