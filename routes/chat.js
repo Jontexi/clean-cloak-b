@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const ChatRoom = require('../models/Chat');
+const ChatRoom = require('../models/ChatRoom');
 const Booking = require('../models/Booking');
 
 // @route   POST /api/chat
