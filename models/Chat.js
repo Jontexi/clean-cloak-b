@@ -125,4 +125,4 @@ chatRoomSchema.methods.markAsRead = function(userRole) {
   return this.save();
 };
 
-module.exports = mongoose.model('ChatRoom', chatRoomSchema);
+module.exports = mongoose.model('Chat', chatRoomSchema);
