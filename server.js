@@ -105,13 +105,12 @@ connectToDatabase().catch(err => {
   console.error('Failed to initialize database connection:', err);
 });
 
-// Routes (CHAT ROUTE DISABLED TO FIX ERROR)
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/cleaners', require('./routes/cleaners'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tracking', require('./routes/tracking'));
-
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/team-leader', require('./routes/team-leader'));  // Team Leader System
