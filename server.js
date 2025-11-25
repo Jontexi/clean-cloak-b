@@ -76,12 +76,10 @@ async function connectToDatabase() {
   
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      bufferCommands: false,
-      bufferMaxEntries: 0
-    });
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000
+});
     
     cachedDb = conn;
     console.log('✅ MongoDB Connected Successfully');
