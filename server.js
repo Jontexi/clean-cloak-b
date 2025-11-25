@@ -111,13 +111,13 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/cleaners', require('./routes/cleaners'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tracking', require('./routes/tracking'));
-// app.use('/api/chat', require('./routes/chat')); // DISABLED - missing ChatRoom model
+
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/team-leader', require('./routes/team-leader'));  // Team Leader System
 app.use('/api/verification', require('./routes/verification'));  // Verification System
+app.use('/api/chat', require('./routes/chat'));
 
-// Enhanced health check route
 app.get('/api/health', async (req, res) => {
   try {
     // Test database connection
