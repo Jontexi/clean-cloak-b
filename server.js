@@ -53,7 +53,12 @@ if (process.env.NODE_ENV === 'development') {
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    'https://sprightly-trifle-9b980c.netlify.app',   // NEW domain ✅
+    'https://teal-daffodil-d3a9b2.netlify.app',     // OLD domain (keep for backup)
+    'http://localhost:5173',                        // Local development
+    'http://localhost:3000'                          // Alternative local
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
