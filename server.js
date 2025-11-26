@@ -209,15 +209,15 @@ process.on('SIGINT', () => {
   });
 });
 
-// Serverless export for Vercel
-if (process.env.NODE_ENV === 'production') {
+// Start server for Render and local development
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://teal-daffodil-d3a9b2.netlify.app/'}`);
+});
+
+// Serverless export for Vercel (if needed)
+if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
   module.exports = serverless(app);
-} else {
-  // Start server for local development
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://teal-daffodil-d3a9b2.netlify.app/'}`);
-  });
 }
