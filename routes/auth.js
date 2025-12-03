@@ -19,7 +19,7 @@ router.post('/register', [
   body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
   body('phone').matches(/^0[17]\d{8}$/).withMessage('Please provide a valid Kenyan phone number'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['client', 'cleaner', 'team_leader']).withMessage('Role must be client, cleaner, or team_leader')
+  body('role').optional().isIn(['client', 'cleaner', 'team_leader', 'admin']).withMessage('Role must be client, cleaner, team_leader, or admin')
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -54,10 +54,17 @@ router.post('/register', [
     // Generate token
     const token = generateToken(user._id);
 
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -80,7 +87,7 @@ router.post('/register', [
 // @desc    Login user
 // @access  Public
 router.post('/login', [
-  body('phone').matches(/^0[17]\d{8}$/).withMessage('Please provide a valid Kenyan phone number'),
+  body('identifier').notEmpty().withMessage('Phone number or name is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   try {
@@ -93,10 +100,13 @@ router.post('/login', [
       });
     }
 
-    const { phone, password } = req.body;
+    const { identifier, password } = req.body;
 
-    // Find user by phone (include password for comparison)
-    const user = await User.findOne({ phone }).select('+password');
+    // Find user by phone or name (include password for comparison)
+    const isPhone = /^0[17]\d{8}$/.test(identifier);
+    const user = await User.findOne(
+      isPhone ? { phone: identifier } : { name: identifier }
+    ).select('+password');
 
     if (!user) {
       return res.status(401).json({
@@ -118,10 +128,17 @@ router.post('/login', [
     // Generate token
     const token = generateToken(user._id);
 
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.json({
       success: true,
       message: 'Login successful',
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -157,6 +174,21 @@ router.get('/me', require('../middleware/auth').protect, async (req, res) => {
       message: 'Error fetching user data'
     });
   }
+});
+
+// @route   POST /api/auth/logout
+// @desc    Logout user / clear cookie
+// @access  Private
+router.post('/logout', (req, res) => {
+  res.cookie('token', 'none', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'User logged out successfully'
+  });
 });
 
 module.exports = router;

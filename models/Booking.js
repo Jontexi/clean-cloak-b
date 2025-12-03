@@ -15,21 +15,39 @@ const bookingSchema = new mongoose.Schema({
     enum: ['car-detailing', 'home-cleaning'],
     required: true
   },
+  // Car Detailing Fields - NEW STRUCTURE
   vehicleType: {
     type: String,
-    enum: ['sedan', 'suv', 'van', 'truck', 'motorcycle', 'other']
+    enum: ['SEDAN', 'MID-SUV', 'SUV-DOUBLE-CAB']
   },
-  carServiceOption: {
+  carServicePackage: {
     type: String,
-    enum: ['INTERIOR', 'EXTERIOR', 'PAINT', 'FULL']
+    enum: ['NORMAL-DETAIL', 'INTERIOR-STEAMING', 'PAINT-CORRECTION', 'FULL-DETAIL', 'FLEET-PACKAGE']
   },
+  paintCorrectionStage: {
+    type: String,
+    enum: ['STAGE-1', 'STAGE-2', 'STAGE-3']
+  },
+  midSUVPricingTier: {
+    type: String,
+    enum: ['STANDARD', 'PREMIUM']
+  },
+  fleetCarCount: {
+    type: Number,
+    min: 5  // Minimum 5 cars for fleet package
+  },
+  selectedCarExtras: [{
+    type: String,
+    enum: ['plastic-restoration', 'rust-removal', 'de-greasing', 'brown-stain-removal']
+  }],
+  // Home Cleaning Fields
   propertySize: {
     type: String,
-    enum: ['studio', '1br', '2br', '3br', '4br+', 'office', 'commercial']
+    enum: ['SMALL', 'MEDIUM', 'LARGE']
   },
   cleaningServiceOption: {
     type: String,
-    enum: ['basic', 'deep', 'move-in', 'post-construction', 'regular']
+    enum: ['STANDARD', 'DEEP', 'CARPET', 'WINDOW', 'POST_CONSTRUCTION', 'MOVE_IN_OUT']
   },
   bookingType: {
     type: String,
@@ -119,11 +137,11 @@ const bookingSchema = new mongoose.Schema({
 });
 
 // Calculate pricing split (60% cleaner, 40% platform)
-bookingSchema.methods.calculatePricing = function() {
+bookingSchema.methods.calculatePricing = function () {
   const totalPrice = this.price || 0;
   const platformFee = Math.round(totalPrice * 0.4); // 40% platform
   const cleanerPayout = Math.round(totalPrice * 0.6); // 60% cleaner
-  
+
   return {
     totalPrice,
     platformFee,

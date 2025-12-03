@@ -8,6 +8,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 const path = require('path');
 const serverless = require('serverless-http');
+const cookieParser = require('cookie-parser');
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,7 @@ app.use(cors({
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -73,14 +75,14 @@ async function connectToDatabase() {
   if (cachedDb) {
     return cachedDb;
   }
-  
+
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-  maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000
-});
-    
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000
+    });
+
     cachedDb = conn;
     console.log('✅ MongoDB Connected Successfully');
     return conn;
@@ -127,7 +129,7 @@ app.get('/api/health', async (req, res) => {
       2: 'connecting',
       3: 'disconnecting'
     };
-    
+
     const health = {
       status: 'OK',
       message: 'Clean Cloak API is running',
@@ -142,12 +144,12 @@ app.get('/api/health', async (req, res) => {
         total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
       }
     };
-    
+
     if (dbState !== 1) {
       health.status = 'WARNING';
       health.message = 'Database connection issue';
     }
-    
+
     res.status(dbState === 1 ? 200 : 503).json(health);
   } catch (error) {
     res.status(500).json({
@@ -169,17 +171,17 @@ app.use((err, req, res, next) => {
     timestamp: new Date().toISOString(),
     userAgent: req.get('User-Agent')
   });
-  
+
   const statusCode = err.statusCode || err.status || 500;
-  
+
   res.status(statusCode).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
+    message: process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
       : err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { 
+    ...(process.env.NODE_ENV === 'development' && {
       stack: err.stack,
-      error: err 
+      error: err
     })
   });
 });
