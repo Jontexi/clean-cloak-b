@@ -438,7 +438,8 @@ router.put('/:id/status', protect, authorize('cleaner', 'admin'), async (req, re
 // -------------------------------------------------
 // 6. RATE A COMPLETED BOOKING (client)
 // -------------------------------------------------
-router.put('/:id/rating', protect, authorize('client'), async (req, res) => {
+// Support both PUT and POST for frontend compatibility
+const rateBookingHandler = async (req, res) => {
   try {
     const { rating, review } = req.body;
     const booking = await Booking.findById(req.params.id);
@@ -465,7 +466,11 @@ router.put('/:id/rating', protect, authorize('client'), async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: 'Rating failed' });
   }
-});
+};
+
+// Support both PUT and POST methods
+router.put('/:id/rating', protect, authorize('client'), rateBookingHandler);
+router.post('/:id/rating', protect, authorize('client'), rateBookingHandler);
 
 // -------------------------------------------------
 // 7. CANCEL BOOKING (client / admin)
