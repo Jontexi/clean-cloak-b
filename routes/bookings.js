@@ -23,10 +23,21 @@ router.post('/public', async (req, res) => {
     const {
       contact,
       serviceCategory,
+      // Car Detailing Fields - NEW STRUCTURE
       vehicleType,
-      carServiceOption,
-      propertySize,
-      cleaningServiceOption,
+      carServicePackage,
+      paintCorrectionStage,
+      midSUVPricingTier,
+      fleetCarCount,
+      selectedCarExtras,
+      // Home Cleaning Fields - NEW STRUCTURE
+      cleaningCategory,
+      houseCleaningType,
+      fumigationType,
+      roomSize,
+      bathroomItems,
+      windowCount,
+      // Common Fields
       bookingType,
       scheduledDate,
       scheduledTime,
@@ -50,17 +61,17 @@ router.post('/public', async (req, res) => {
       });
     }
 
-    if (serviceCategory === 'car-detailing' && (!vehicleType || !carServiceOption)) {
+    if (serviceCategory === 'car-detailing' && (!vehicleType || !carServicePackage)) {
       return res.status(400).json({
         success: false,
-        message: 'Vehicle type and service option are required for car detailing bookings'
+        message: 'Vehicle type and service package are required for car detailing bookings'
       });
     }
 
-    if (serviceCategory === 'home-cleaning' && (!propertySize || !cleaningServiceOption)) {
+    if (serviceCategory === 'home-cleaning' && !cleaningCategory) {
       return res.status(400).json({
         success: false,
-        message: 'Property size and cleaning option are required for home cleaning bookings'
+        message: 'Cleaning category is required for home cleaning bookings'
       });
     }
 
@@ -88,10 +99,21 @@ router.post('/public', async (req, res) => {
 
     const bookingPayload = {
       serviceCategory,
+      // Car Detailing Fields
       vehicleType,
-      carServiceOption,
-      propertySize,
-      cleaningServiceOption,
+      carServicePackage,
+      paintCorrectionStage,
+      midSUVPricingTier,
+      fleetCarCount,
+      selectedCarExtras,
+      // Home Cleaning Fields
+      cleaningCategory,
+      houseCleaningType,
+      fumigationType,
+      roomSize,
+      bathroomItems,
+      windowCount,
+      // Common Fields
       bookingType,
       scheduledDate,
       scheduledTime,
@@ -235,13 +257,13 @@ router.get('/opportunities', protect, authorize('cleaner'), async (req, res) => 
         .join(' · ');
 
       const timing = booking.bookingType === 'scheduled' && booking.scheduledDate
-        ? `${booking.scheduledDate}${booking.scheduledTime ? ` · ${booking.scheduledTime}` : ''}` 
+        ? `${booking.scheduledDate}${booking.scheduledTime ? ` · ${booking.scheduledTime}` : ''}`
         : 'Immediate dispatch';
 
       const requirements = [
         booking.vehicleType ? `Vehicle: ${booking.vehicleType}` : null,
         booking.carServiceOption ? `Package: ${booking.carServiceOption}` : null,
-        `Status: ${booking.status}` 
+        `Status: ${booking.status}`
       ].filter(Boolean);
 
       return {
@@ -351,7 +373,7 @@ router.post('/:id/pay', protect, authorize('client'), async (req, res) => {
 
     // Calculate pricing split
     const pricing = booking.calculatePricing();
-    
+
     // Update booking with calculated pricing
     booking.totalPrice = pricing.totalPrice;
     booking.platformFee = pricing.platformFee;

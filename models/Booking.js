@@ -40,14 +40,32 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     enum: ['plastic-restoration', 'rust-removal', 'de-greasing', 'brown-stain-removal']
   }],
-  // Home Cleaning Fields
-  propertySize: {
+  // Home Cleaning Fields - NEW STRUCTURE
+  cleaningCategory: {
     type: String,
-    enum: ['SMALL', 'MEDIUM', 'LARGE']
+    enum: ['HOUSE_CLEANING', 'FUMIGATION', 'MOVE_IN_OUT', 'POST_CONSTRUCTION']
   },
-  cleaningServiceOption: {
+  houseCleaningType: {
     type: String,
-    enum: ['STANDARD', 'DEEP', 'CARPET', 'WINDOW', 'POST_CONSTRUCTION', 'MOVE_IN_OUT']
+    enum: ['BATHROOM', 'WINDOW', 'ROOM']
+  },
+  fumigationType: {
+    type: String,
+    enum: ['GENERAL', 'BED_BUG']
+  },
+  roomSize: {
+    type: String,
+    enum: ['STUDIO', '1BED', '2BED', '3BED', '4BED', '5BED']
+  },
+  bathroomItems: {
+    general: { type: Boolean, default: false },
+    sink: { type: Boolean, default: false },
+    toilet: { type: Boolean, default: false }
+  },
+  windowCount: {
+    small: { type: Number, default: 0 },
+    large: { type: Number, default: 0 },
+    wholeHouse: { type: Boolean, default: false }
   },
   bookingType: {
     type: String,
