@@ -141,7 +141,7 @@ chatRoomSchema.methods.markAsRead = async function(userRole) {
 };
 
 // Indexes for performance
-chatRoomSchema.index({ booking: 1 });
+// Note: booking index is already created by unique: true constraint
 chatRoomSchema.index({ client: 1, active: 1 });
 chatRoomSchema.index({ cleaner: 1, active: 1 });
 chatRoomSchema.index({ updatedAt: -1 });

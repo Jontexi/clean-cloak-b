@@ -207,7 +207,7 @@ cleanerProfileSchema.methods.updateRating = function(newRating) {
 };
 
 // Index for faster queries
-cleanerProfileSchema.index({ user: 1 });
+// Note: user index is already created by unique: true constraint
 cleanerProfileSchema.index({ services: 1, isAvailable: 1 });
 cleanerProfileSchema.index({ city: 1, services: 1 });
 cleanerProfileSchema.index({ approvalStatus: 1, createdAt: -1 });
