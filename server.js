@@ -33,6 +33,19 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
+// Strict rate limiting for payment endpoints
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Only 5 payment attempts per 15 minutes
+  message: {
+    success: false,
+    message: "Too many payment attempts. Please try again in 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Count all requests
+});
+
 // Request timeout for serverless
 app.use((req, res, next) => {
   res.setTimeout(25000, () => {
@@ -131,7 +144,7 @@ app.use("/api/bookings", require("./routes/bookings"));
 app.use("/api/cleaners", require("./routes/cleaners"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/tracking", require("./routes/tracking"));
-app.use("/api/payments", require("./routes/payments"));
+app.use("/api/payments", paymentLimiter, require("./routes/payments")); // ✅ Payment rate limiting
 app.use("/api/admin", require("./routes/admin"));
 app.use("/api/team-leader", require("./routes/team-leader")); // Team Leader System
 app.use("/api/verification", require("./routes/verification")); // Verification System

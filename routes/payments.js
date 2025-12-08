@@ -211,6 +211,12 @@ async function processCleanerPayout(booking, payoutAmount) {
       throw new Error("Cleaner M-Pesa phone number not configured");
     }
 
+    // Convert phone to international format (2547XXXXXXXX)
+    const mpesaPhone = cleanerProfile.getInternationalMpesaPhone();
+    if (!mpesaPhone) {
+      throw new Error("Invalid M-Pesa phone number format");
+    }
+
     // Create payout transaction record
     const payoutTransaction = new Transaction({
       booking: booking._id,
@@ -224,7 +230,8 @@ async function processCleanerPayout(booking, payoutAmount) {
       description: `Cleaner payout for cleaning service - ${booking.serviceCategory}`,
       status: "pending",
       metadata: {
-        mpesaPhone: cleanerProfile.mpesaPhoneNumber,
+        mpesaPhone: mpesaPhone,
+        originalPhone: cleanerProfile.mpesaPhoneNumber,
       },
     });
 
@@ -234,14 +241,37 @@ async function processCleanerPayout(booking, payoutAmount) {
     booking.payoutStatus = "pending";
     await booking.save();
 
-    // Process M-Pesa payout
-    await processMpesaPayout(
-      payoutTransaction,
-      cleanerProfile.mpesaPhoneNumber,
-      payoutAmount,
-    );
+    // Process M-Pesa payout using standardized phone format
+    await processMpesaPayout(payoutTransaction, mpesaPhone, payoutAmount);
   } catch (error) {
     console.error("Error processing cleaner payout:", error);
+
+    // ⚠️ CRITICAL ERROR NOTIFICATION
+    console.error(`
+    ═══════════════════════════════════════════════════════
+    🚨 CRITICAL: CLEANER PAYOUT FAILED 🚨
+    ═══════════════════════════════════════════════════════
+    Booking ID: ${booking._id}
+    Cleaner ID: ${booking.cleaner}
+    Amount Failed: KSh ${payoutAmount}
+    Error: ${error.message}
+
+    ⚠️  URGENT ADMIN ACTION REQUIRED:
+    1. Client has been charged
+    2. Cleaner has NOT been paid
+    3. Manual payout required immediately
+
+    Cleaner Details:
+    - Phone: ${booking.cleaner?.phone || "Unknown"}
+    - M-Pesa: Check CleanerProfile
+
+    Action Steps:
+    1. Verify cleaner M-Pesa number is correct
+    2. Process manual M-Pesa payment of KSh ${payoutAmount}
+    3. Update transaction in database
+    4. Contact cleaner to confirm receipt
+    ═══════════════════════════════════════════════════════
+    `);
 
     // Create failed transaction record
     const failedTransaction = new Transaction({
@@ -258,6 +288,8 @@ async function processCleanerPayout(booking, payoutAmount) {
       metadata: {
         error: error.message,
         originalAmount: payoutAmount,
+        timestamp: new Date().toISOString(),
+        requiresManualIntervention: true,
       },
     });
 
@@ -265,6 +297,10 @@ async function processCleanerPayout(booking, payoutAmount) {
 
     booking.payoutStatus = "failed";
     await booking.save();
+
+    // TODO: Send email/SMS to admin
+    // TODO: Create admin task in database
+    // TODO: Send notification to cleaner about delay
   }
 }
 
@@ -277,6 +313,9 @@ async function processMpesaPayout(transaction, phoneNumber, amount) {
       process.env.INTASEND_SECRET_KEY,
       process.env.NODE_ENV !== "production", // true = sandbox
     );
+
+    console.log(`Attempting M-Pesa payout: KSh ${amount} to ${phoneNumber}`);
+    console.log(`Phone format: ${phoneNumber} (should be 2547XXXXXXXX)`);
 
     const response = await client.transfer().mpesa({
       amount: amount,
@@ -298,16 +337,28 @@ async function processMpesaPayout(transaction, phoneNumber, amount) {
       booking.payoutProcessedAt = new Date();
       await booking.save();
 
-      console.log(`M-Pesa payout SUCCESS: KSh ${amount} to ${phoneNumber}`);
+      console.log(`✅ M-Pesa payout SUCCESS: KSh ${amount} to ${phoneNumber}`);
+      console.log(`Transaction ID: ${response.id}`);
     } else {
       throw new Error(response.message || "M-Pesa payout failed");
     }
   } catch (error) {
-    console.error("M-Pesa payout error:", error);
+    console.error("❌ M-Pesa payout error:", error);
+
+    // Detailed error logging
+    console.error(`
+    Payout Details:
+    - Transaction ID: ${transaction._id}
+    - Amount: KSh ${amount}
+    - Phone: ${phoneNumber}
+    - Error: ${error.message}
+    - Stack: ${error.stack}
+    `);
 
     // Update transaction as failed
     transaction.status = "failed";
     transaction.metadata.error = error.message;
+    transaction.metadata.failedAt = new Date().toISOString();
     await transaction.save();
 
     // Update booking payout status

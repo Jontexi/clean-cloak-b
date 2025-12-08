@@ -47,10 +47,10 @@ router.post("/public", async (req, res) => {
       paymentStatus,
     } = req.body;
 
-    if (!contact?.name || !contact?.phone || !contact?.email) {
+    if (!contact?.name || !contact?.phone) {
       return res.status(400).json({
         success: false,
-        message: "Contact name, phone, and email are required",
+        message: "Contact name and phone are required",
       });
     }
 
@@ -91,19 +91,40 @@ router.post("/public", async (req, res) => {
       });
     }
 
-    let user = await User.findOne({
-      $or: [{ phone: contact.phone }, { email: contact.email }],
-    });
+    let user = await User.findOne({ phone: contact.phone });
 
     if (!user) {
-      const generatedPassword = crypto.randomBytes(8).toString("hex");
+      // Generate a simple, memorable password
+      const generatedPassword = crypto.randomBytes(4).toString("hex"); // Shorter: 8 characters
       user = await User.create({
         name: contact.name,
-        email: contact.email,
         phone: contact.phone,
         password: generatedPassword,
         role: "client",
       });
+
+      // ⚠️ IMPORTANT: Log password for manual SMS notification
+      console.log(`
+      ═══════════════════════════════════════════════════════
+      🆕 NEW USER AUTO-CREATED FROM PUBLIC BOOKING
+      ═══════════════════════════════════════════════════════
+      Name: ${contact.name}
+      Phone: ${contact.phone}
+      Password: ${generatedPassword}
+
+      ⚠️  ADMIN ACTION REQUIRED:
+      Send SMS to ${contact.phone} with login credentials:
+
+      "Welcome to Clean Cloak! Your account:
+      Phone: ${contact.phone}
+      Password: ${generatedPassword}
+      Login at: https://rad-maamoul-c7a511.netlify.app
+      Please change your password after first login."
+      ═══════════════════════════════════════════════════════
+      `);
+
+      // TODO: Integrate SMS API (e.g., Africa's Talking, Twilio)
+      // await sendSMS(contact.phone, `Welcome to Clean Cloak! Login: ${contact.phone}, Password: ${generatedPassword}`);
     }
 
     const bookingPayload = {
@@ -139,6 +160,14 @@ router.post("/public", async (req, res) => {
       success: true,
       message: "Booking created successfully",
       booking,
+      userInfo: !user.isModified
+        ? undefined
+        : {
+            message:
+              "Account created automatically. Check server logs for login credentials.",
+            phone: contact.phone,
+            needsPasswordReset: true,
+          },
     });
   } catch (error) {
     console.error("Public booking creation error:", error);
@@ -191,8 +220,8 @@ router.get("/", protect, async (req, res) => {
     }
 
     const bookings = await Booking.find(query)
-      .populate("client", "name phone email")
-      .populate("cleaner", "name phone email")
+      .populate("client", "name phone")
+      .populate("cleaner", "name phone")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -334,8 +363,8 @@ router.get(
 router.get("/:id", protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate("client", "name phone email")
-      .populate("cleaner", "name phone email");
+      .populate("client", "name phone")
+      .populate("cleaner", "name phone");
 
     if (!booking) {
       return res.status(404).json({
@@ -374,8 +403,8 @@ router.get("/:id", protect, async (req, res) => {
 router.post("/:id/pay", protect, authorize("client"), async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate("client", "phone")
-      .populate("cleaner", "phone");
+      .populate("client", "name phone")
+      .populate("cleaner", "name phone");
 
     if (!booking) {
       return res
