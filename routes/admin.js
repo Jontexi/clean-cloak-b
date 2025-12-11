@@ -371,3 +371,34 @@ router.get('/dashboard/stats', protect, authorize('admin'), async (req, res) => 
 });
 
 module.exports = router;
+// ADMIN USER MANAGEMENT UTILITIES
+// Add minimal admin-only endpoint to reset a user's password and optionally update role/name
+router.put('/users/:phone/reset-password', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const { newPassword, role, name } = req.body || {};
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'newPassword is required and must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({ phone }).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.password = newPassword;
+    if (role) user.role = role;
+    if (name) user.name = name;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'User credentials updated',
+      user: { id: user._id, name: user.name, phone: user.phone, role: user.role }
+    });
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    res.status(500).json({ success: false, message: 'Error updating user', error: error.message });
+  }
+});
