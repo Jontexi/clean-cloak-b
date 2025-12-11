@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const { protect, authorize } = require("../middleware/auth");
 const Booking = require("../models/Booking");
 const CleanerProfile = require("../models/CleanerProfile");
@@ -127,6 +128,18 @@ router.post("/public", async (req, res) => {
       // await sendSMS(contact.phone, `Welcome to Clean Cloak! Login: ${contact.phone}, Password: ${generatedPassword}`);
     }
 
+    // Auto-login or refresh session for client
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE || "7d",
+    });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     const bookingPayload = {
       serviceCategory,
       // Car Detailing Fields
@@ -160,14 +173,10 @@ router.post("/public", async (req, res) => {
       success: true,
       message: "Booking created successfully",
       booking,
-      userInfo: !user.isModified
-        ? undefined
-        : {
-            message:
-              "Account created automatically. Check server logs for login credentials.",
-            phone: contact.phone,
-            needsPasswordReset: true,
-          },
+      userInfo: {
+        phone: contact.phone,
+        loggedIn: true,
+      },
     });
   } catch (error) {
     console.error("Public booking creation error:", error);
@@ -281,7 +290,7 @@ router.get(
           .skip(skip)
           .limit(pageSize)
           .select(
-            "serviceCategory bookingType status price vehicleType carServiceOption location scheduledDate scheduledTime createdAt",
+            "serviceCategory bookingType status price vehicleType carServicePackage cleaningCategory location scheduledDate scheduledTime createdAt",
           ),
         Booking.countDocuments(query),
       ]);
@@ -293,19 +302,27 @@ router.get(
       });
 
       const carServiceLabels = {
-        INTERIOR: "Interior Detail",
-        EXTERIOR: "Exterior Detail",
-        PAINT: "Paint Correction",
-        FULL: "Full Detail",
+        "NORMAL-DETAIL": "Normal Detail",
+        "INTERIOR-STEAMING": "Interior Steaming",
+        "PAINT-CORRECTION": "Paint Correction",
+        "FULL-DETAIL": "Full Detail",
+        "FLEET-PACKAGE": "Fleet Package",
       };
 
       const opportunities = bookings.map((booking) => {
-        const title = [
-          carServiceLabels[booking.carServiceOption] || "Car Detailing",
-          booking.vehicleType,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+        let title = "";
+        if (booking.serviceCategory === "car-detailing") {
+          title = [
+            carServiceLabels[booking.carServicePackage] || booking.carServicePackage || "Car Detailing",
+            booking.vehicleType,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+        } else {
+          title = [
+            booking.cleaningCategory || "Home Cleaning",
+          ].filter(Boolean).join(" · ");
+        }
 
         const timing =
           booking.bookingType === "scheduled" && booking.scheduledDate
@@ -314,9 +331,8 @@ router.get(
 
         const requirements = [
           booking.vehicleType ? `Vehicle: ${booking.vehicleType}` : null,
-          booking.carServiceOption
-            ? `Package: ${booking.carServiceOption}`
-            : null,
+          booking.carServicePackage ? `Package: ${booking.carServicePackage}` : null,
+          booking.cleaningCategory ? `Category: ${booking.cleaningCategory}` : null,
           `Status: ${booking.status}`,
         ].filter(Boolean);
 
@@ -400,7 +416,7 @@ router.get("/:id", protect, async (req, res) => {
 // -------------------------------------------------
 // 4. PAY FOR A BOOKING – STK PUSH + 60/40 SPLIT
 // -------------------------------------------------
-router.post("/:id/pay", protect, authorize("client"), async (req, res) => {
+router.post(":id/pay", protect, authorize("client"), async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate("client", "name phone")
@@ -476,6 +492,42 @@ router.post("/:id/pay", protect, authorize("client"), async (req, res) => {
     });
   }
 });
+
+// -------------------------------------------------
+// 4b. ACCEPT BOOKING (Cleaner claims an unassigned booking)
+// -------------------------------------------------
+router.post(
+  "/:id/accept",
+  protect,
+  authorize("cleaner"),
+  async (req, res) => {
+    try {
+      const booking = await Booking.findById(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      if (booking.cleaner) {
+        return res.status(400).json({ success: false, message: "Booking already assigned" });
+      }
+
+      if (!(booking.status === "pending" || booking.status === "confirmed")) {
+        return res.status(400).json({ success: false, message: "Booking cannot be accepted in current status" });
+      }
+
+      booking.cleaner = req.user.id;
+      if (booking.status === "pending") {
+        booking.status = "confirmed";
+      }
+      await booking.save();
+
+      res.json({ success: true, message: "Booking accepted", booking });
+    } catch (error) {
+      console.error("Accept booking error:", error);
+      res.status(500).json({ success: false, message: "Error accepting booking" });
+    }
+  },
+);
 
 // -------------------------------------------------
 // 5. UPDATE BOOKING STATUS (cleaner / admin)

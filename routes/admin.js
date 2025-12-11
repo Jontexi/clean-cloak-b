@@ -17,7 +17,7 @@ router.get('/cleaners/pending', protect, authorize('admin'), async (req, res) =>
     const { city, service, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    let query = { verificationStatus: 'pending' };
+    let query = { approvalStatus: 'pending' };
     if (city) query.city = new RegExp(city, 'i');
     if (service) query.services = service;
 
@@ -251,6 +251,7 @@ router.get('/clients', protect, authorize('admin'), async (req, res) => {
           totalBookings: 0,
           totalSpent: 0,
           lastBooking: null,
+          lastService: null,
           status: 'active'
         });
       }
@@ -259,6 +260,9 @@ router.get('/clients', protect, authorize('admin'), async (req, res) => {
       client.totalSpent += booking.price || 0;
       if (!client.lastBooking || new Date(booking.createdAt) > new Date(client.lastBooking)) {
         client.lastBooking = booking.createdAt;
+        client.lastService = booking.serviceCategory === 'car-detailing'
+          ? (booking.carServicePackage || 'Car Detailing')
+          : (booking.cleaningCategory || 'Home Cleaning');
       }
     });
 
