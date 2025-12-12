@@ -154,6 +154,8 @@ router.put('/cleaners/:id/approve', protect, authorize('admin'), async (req, res
 
     await profile.save();
 
+    await User.findByIdAndUpdate(profile.user, { role: 'cleaner' });
+
     res.json({
       success: true,
       message: `${profile.firstName} ${profile.lastName} approved successfully`,

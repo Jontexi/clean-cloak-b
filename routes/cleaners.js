@@ -6,8 +6,8 @@ const User = require('../models/User');
 
 // @route   POST /api/cleaners/profile
 // @desc    Create cleaner profile
-// @access  Private (Cleaner)
-router.post('/profile', protect, authorize('cleaner'), async (req, res) => {
+// @access  Private (Cleaner or Client for initial submission)
+router.post('/profile', protect, authorize('cleaner', 'client'), async (req, res) => {
   try {
     // Check if profile already exists
     const existingProfile = await CleanerProfile.findOne({ user: req.user.id });
